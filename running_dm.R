@@ -18,7 +18,6 @@ gunzip("dge_normalized.txt.gz")
 gunzip("dge_raw.txt.gz")#,"geometry.txt.gz")
 gunzip("geometry.txt.gz")
 
-
 #--------------------------------------------------------------------------------------------------
 #                                   RUNNING DISTMAP
 #--------------------------------------------------------------------------------------------------
@@ -73,14 +72,45 @@ dm <- binarizeSingleCellData(dm, seq(0.15, 0.5, 0.01))
 #MCC counts of mapping of cells to each bins
 dm <- mapCells(dm)
 
-#results
+#--------------------------------------------------------------------------------------------------
+#                                   RESULTS
+#--------------------------------------------------------------------------------------------------
+
+#-----MCC Scores------
 dm_mcc <- dm@mcc.scores
-dm_actual <- c()
+dm_mccT <- t(dm_mcc)
+
+#-----Actual positions-----
+
+#actual - when picking the top one only ------
+dm_actual_1 <- c()
 for (i in 1:ncol(dm_mcc)){
   dm_cell <- dm_mcc[,i]
   dm_cell_ordered <- order(dm_cell, decreasing = T)[1]
-  dm_actual <- c(dm_actual, dm_cell_ordered)
+  dm_actual_1 <- c(dm_actual_1, dm_cell_ordered)
 }
+
+#actual - when picking the all max ------
+dm_actual_all <- c()
+for (i in 1:ncol(dm_mcc)){
+  cell <- dm_mcc[,i]
+  pos = which(cell == max(cell))
+  dm_actual_all <- c(dm_actual_all, list(pos))
+}
+
+#actual - picking top 10 from actual
+dm_actual_10 <- c()
+for (i in 1:ncol(dm_mcc)){
+  cell <- dm_mcc[,i]
+  #pos <- order(cell, decreasing = T)[1:10]
+  #dm_actual <- rbind(dm_actual, pos)
+  pos = which(cell == max(cell))
+  dm_actual_10 <- c(dm_actual_10, list(pos))
+}
+
 #saving results
-saveRDS(dm_actual,"dm_actual.rds")
 saveRDS(dm_mcc,"dm_mcc.rds")
+
+saveRDS(dm_actual_1,"dm_actual_1.rds")
+saveRDS(dm_actual_all,"dm_actual_all.rds")
+saveRDS(dm_actual_10,"dm_actual_10.rds")
