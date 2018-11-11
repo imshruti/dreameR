@@ -1,8 +1,10 @@
-#--------------------------------------------------------------------------------------------------
-#                                   DOWNLOAD LINKS
-#--------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#                     DOWNLOAD LINKS
+#------------------------------------------------------------------------------
 
-if(!all(file.exists(c("dge_raw.txt.gz","dge_normalized.txt.gz","binarized_bdtnp.csv.gz","bdtnp.txt.gz","geometry.txt.gz")))){
+if (!all(file.exists(c("dge_raw.txt.gz","dge_normalized.txt.gz",
+                      "binarized_bdtnp.csv.gz","bdtnp.txt.gz",
+                      "geometry.txt.gz")))) {
   download.file("http://bimsbstatic.mdc-berlin.de/rajewsky/DVEX/dge_raw.txt.gz",destfile = "dge_raw.txt.gz")
   download.file("http://bimsbstatic.mdc-berlin.de/rajewsky/DVEX/dge_normalized.txt.gz",destfile = "dge_normalized.txt.gz")
   download.file("http://bimsbstatic.mdc-berlin.de/rajewsky/DVEX/binarized_bdtnp.csv.gz",destfile = "binarized_bdtnp.csv.gz")
@@ -15,30 +17,36 @@ library(R.utils)
 gunzip("bdtnp.txt.gz")
 gunzip("binarized_bdtnp.csv.gz")
 gunzip("dge_normalized.txt.gz")
-gunzip("dge_raw.txt.gz")#,"geometry.txt.gz")
+gunzip("dge_raw.txt.gz")
 gunzip("geometry.txt.gz")
 
-#--------------------------------------------------------------------------------------------------
-#                                   RUNNING DISTMAP
-#--------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------
+#                     RUNNING DISTMAP
+#----------------------------------------------------------------------------
 
-#installation 
+#installation
 install.packages("devtools","ggplot2")
 install.packages("ggplot2")
 library(devtools)
 install_github("rajewsky-lab/DistMap")
 
 #IMPORTANT
-#edited two names in vi (dge_raw&norm) before running this at pos 387- betaCOPsg and 7348 - PP2A-B
+# edited two names in vi (dge_raw&norm) before running this
+# at pos  387 - betaCOPsg
+# at pos 7348 - PP2A-B
+#----------------------------------------------------------------------------
+## Run from here #
+#----------------------------------------------------------------------------
 
 library(ggplot2)
 library(DistMap)
 
-raw.data = read.table("dge_raw.txt", header= FALSE, sep="\t", row.names = 1)
+raw.data = read.table("dge_raw.txt", header = FALSE, sep = "\t", row.names = 1)
 raw.data = as.matrix(raw.data)
 raw.data.genes = rownames(raw.data)
 
-norm.data = read.table("dge_normalized.txt", header= TRUE, sep="\t",row.names = 1)
+norm.data = read.table("dge_normalized.txt", header = TRUE, sep = "\t",
+                       row.names = 1)
 norm.data = as.matrix(norm.data)
 norm.data.genes = rownames(norm.data)
 norm.data.cell = colnames(norm.data)
@@ -60,57 +68,39 @@ print(missingGenes)
 stopifnot(all(insitu.driver %in% raw.data.genes))
 
 #loading geometry data
-geometry = read.csv("geometry.txt", sep= " ", header = TRUE)
+geometry = read.csv("geometry.txt", sep = " ", header = TRUE)
 geometry = as.matrix(geometry)
 
 #### Running DistMap
 #input data into DIstMap class
-dm = new("DistMap", raw.data=raw.data,data=norm.data,
-         insitu.matrix=insitu.matrix, geometry=geometry)
+dm = new("DistMap", raw.data = raw.data,data = norm.data,
+         insitu.matrix = insitu.matrix, geometry = geometry)
 #get binasied dge input dataset
 dm <- binarizeSingleCellData(dm, seq(0.15, 0.5, 0.01))
 #MCC counts of mapping of cells to each bins
 dm <- mapCells(dm)
 
-#--------------------------------------------------------------------------------------------------
-#                                   RESULTS
-#--------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------
+#                     RESULTS
+#----------------------------------------------------------------------------
 
-#-----MCC Scores------
+#MCC Scores
 dm_mcc <- dm@mcc.scores
-dm_mccT <- t(dm_mcc)
 
-#-----Actual positions-----
+#Actual positions
 
-#actual - when picking the top one only ------
-dm_actual_1 <- c()
-for (i in 1:ncol(dm_mcc)){
-  dm_cell <- dm_mcc[,i]
-  dm_cell_ordered <- order(dm_cell, decreasing = T)[1]
-  dm_actual_1 <- c(dm_actual_1, dm_cell_ordered)
+#actual - when picking the top one only
+dm_actual <- c()
+for (i in 1:1297) {
+  ##----- when picking the top one only
+  #dm_actual <- c(dm_actual, order(dm_mcc[,i], decreasing = T)[1])
+  ##----- when picking top 10 from actual
+  #dm_actual <- c(dm_actual, order(dm_mcc[,i], decreasing = T)[1:10])
+  ##----- picking all values with max mcc
+  dm_actual <- c(dm_actual, list(which(dm_mcc[,i] == max(dm_mcc[,i]))))
 }
 
-#actual - when picking the all max ------
-dm_actual_all <- c()
-for (i in 1:ncol(dm_mcc)){
-  cell <- dm_mcc[,i]
-  pos = which(cell == max(cell))
-  dm_actual_all <- c(dm_actual_all, list(pos))
-}
-
-#actual - picking top 10 from actual
-dm_actual_10 <- c()
-for (i in 1:ncol(dm_mcc)){
-  cell <- dm_mcc[,i]
-  #pos <- order(cell, decreasing = T)[1:10]
-  #dm_actual <- rbind(dm_actual, pos)
-  pos = which(cell == max(cell))
-  dm_actual_10 <- c(dm_actual_10, list(pos))
-}
 
 #saving results
 saveRDS(dm_mcc,"dm_mcc.rds")
-
-saveRDS(dm_actual_1,"dm_actual_1.rds")
-saveRDS(dm_actual_all,"dm_actual_all.rds")
-saveRDS(dm_actual_10,"dm_actual_10.rds")
+saveRDS(dm_actual,"dm_actual.rds")
